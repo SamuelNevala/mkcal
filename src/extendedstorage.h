@@ -642,6 +642,21 @@ class MKCAL_EXPORT ExtendedStorage
     void setAlarms( const KCalCore::Incidence::Ptr &incidence );
 
     /**
+      Used to remove primed alarms for given notebook from timed
+
+      @param notebookUid notebook uid
+    */
+    void clearAlarms(const QString &notebookUid);
+
+    /**
+      Used to block timed alarm priming for given list of notebooks. Applies
+      to setAlarms & resetAlarms methods.
+
+      @param notebookUids list of notebook uids that should not get alarms primed
+    */
+    void blockAlarms(const QStringList &notebookUids);
+
+    /**
       Creates and sets a default notebook. Usually called for an empty
       calendar.
 
@@ -661,6 +676,8 @@ class MKCAL_EXPORT ExtendedStorage
     */
     virtual void virtual_hook( int id, void *data ) = 0;
 
+
+
   protected:
     virtual bool loadNotebooks() = 0;
     virtual bool reloadNotebooks() = 0;
@@ -677,7 +694,6 @@ class MKCAL_EXPORT ExtendedStorage
     void setFinished( bool error, const QString &info );
     void clearAlarms( const KCalCore::Incidence::Ptr &incidence );
     void clearAlarms( const KCalCore::Incidence::List &incidences );
-    void clearAlarms( const QString &nname );
 
     bool isUncompletedTodosLoaded();
     void setIsUncompletedTodosLoaded( bool loaded );

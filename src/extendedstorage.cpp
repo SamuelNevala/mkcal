@@ -35,6 +35,7 @@
 
 #include <exceptions.h>
 #include <calendar.h>
+#include <QtCore/QSettings>
 using namespace KCalCore;
 
 #include <kdebug.h>
@@ -553,10 +554,12 @@ void ExtendedStorage::resetAlarms( const Incidence::List &incidences )
   // list of all timed events
   Timed::Event::List events;
 
+  QSettings settings("mer", "mckal");
   foreach(const Incidence::Ptr incidence, incidences) {
-    clearAlarms( incidence );
-    d->setAlarms( incidence, events, now );
-
+    if (!settings.value("block/" + calendar()->notebook(incidence), false).toBool()) {
+        clearAlarms( incidence );
+        d->setAlarms( incidence, events, now );
+    }
   }
   //Add all alarms at once
   QDBusReply < QList<QVariant> > reply = timed.add_events_sync( events );
@@ -592,6 +595,11 @@ void ExtendedStorage::setAlarms( const Incidence::Ptr &incidence )
     kError() << "cannot set alarm for incidence: "
              << "alarm interface is not valid" << timed.lastError();
     return;
+  }
+
+  QSettings settings("mer", "mckal");
+  if (settings.value("block/" + calendar()->notebook(incidence), false).toBool()) {
+      return;
   }
 
   // list of all timed events
@@ -776,36 +784,45 @@ void ExtendedStorage::clearAlarms( const KCalCore::Incidence::List &incidences )
 #endif
 }
 
-void ExtendedStorage::clearAlarms( const QString &nb )
+void ExtendedStorage::clearAlarms( const QString &notebookUid )
 {
 #if defined(TIMED_SUPPORT)
   QMap<QString,QVariant> map;
   map["APPLICATION"] = "libextendedkcal";
-  map["notebook"] = nb;
+  map["notebook"] = notebookUid;
 
   Timed::Interface timed;
   if ( !timed.isValid() ) {
-    kError() << "cannot clear alarms for" << nb
+    kError() << "cannot clear alarms for" << notebookUid
              << "alarm interface is not valid" << timed.lastError();
     return;
   }
   QDBusReply<QList<QVariant> > reply = timed.query_sync( map );
   if ( !reply.isValid() ) {
-    kError() << "cannot clear alarms for" << nb << timed.lastError();
+    kError() << "cannot clear alarms for" << notebookUid << timed.lastError();
     return;
   }
   const QList<QVariant> &result = reply.value();
   for ( int i = 0; i < result.size(); i++ ) {
     uint32_t cookie = result[i].toUInt();
-    kDebug() << "removing alarm" << cookie << nb;
+    kDebug() << "removing alarm" << cookie << notebookUid;
     QDBusReply<bool> reply = timed.cancel_sync( cookie );
     if ( !reply.isValid() || !reply.value() ) {
-      kError() << "cannot remove alarm" << cookie << nb;
+      kError() << "cannot remove alarm" << cookie << notebookUid;
     }
   }
 #else
-  Q_UNUSED( nb );
+  Q_UNUSED( notebookUid );
 #endif
+}
+
+void ExtendedStorage::blockAlarms(const QStringList &notebookUids)
+{
+    QSettings settings("mer", "mckal");
+    settings.clear();
+    foreach (QString uid, notebookUids) {
+        settings.setValue("block/" + uid, true);
+    }
 }
 
 Incidence::Ptr ExtendedStorage::checkAlarm( const QString &uid, const QString &recurrenceId,

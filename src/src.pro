@@ -28,7 +28,7 @@ CONFIG(debug,debug|release) {
 TEMPLATE = lib
 equals(QT_MAJOR_VERSION, 4): TARGET = mkcal
 equals(QT_MAJOR_VERSION, 5): TARGET = mkcal-qt5
-VERSION+= 0.3.13
+VERSION+= 0.3.18
 
 DEPENDPATH += . \
     klibport \
